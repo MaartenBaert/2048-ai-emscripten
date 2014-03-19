@@ -1,0 +1,35 @@
+Full variant (4x4 field):
+Max guaranteed score = at least 284, after 44 moves
+
+Moves: 30, Best score: 1000168
+**** Killer move - hit=1306545 miss=4386150
+**** Cache - hit=18713060 partial=3064438 miss=2628257 deadend=7
+Moves: 32, Best score: 1000188
+**** Killer move - hit=2523788 miss=8254519
+**** Cache - hit=34137761 partial=6074279 miss=4704028 deadend=10
+Moves: 34, Best score: 1000200
+**** Killer move - hit=3760130 miss=12769024
+**** Cache - hit=49389203 partial=8985267 miss=7543887 deadend=47
+Moves: 36, Best score: 1000204
+**** Killer move - hit=5827323 miss=19796223
+**** Cache - hit=71790229 partial=13705823 miss=11917723 deadend=126
+Moves: 38, Best score: 1000216
+**** Killer move - hit=9915169 miss=32845896
+**** Cache - hit=114851339 partial=24204872 miss=18556193 deadend=387
+Moves: 40, Best score: 1000236
+**** Killer move - hit=19895972 miss=64869843
+**** Cache - hit=232800136 partial=53579405 miss=31186410 deadend=850
+Done!
+
+real	5m10.372s
+user	5m9.887s
+sys	0m0.613s
+
+--------------------
+
+Moves: 42, Best score: 1000248
+**** Killer move - hit=32926260 miss=103996054
+**** Cache - hit=359235427 partial=90322796 miss=46599518 deadend=1659
+Moves: 44, Best score: 1000284
+**** Killer move - hit=55921945 miss=173703210
+**** Cache - hit=596718566 partial=161043914 miss=68581241 deadend=3727

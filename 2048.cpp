@@ -25,6 +25,50 @@ void PrintField(const Field& in) {
 	std::cerr << std::endl;
 }
 
+void NormalizeField(Field* out, const Field& in) {
+	int n = FIELD_SIZE - 1;
+	int matrices[8][6] = {
+		{0, +1, 0, 0, 0, +1},
+		{0, +1, 0, n, 0, -1},
+		{n, -1, 0, 0, 0, +1},
+		{n, -1, 0, n, 0, -1},
+		{0, 0, +1, 0, +1, 0},
+		{0, 0, +1, n, -1, 0},
+		{n, 0, -1, 0, +1, 0},
+		{n, 0, -1, n, -1, 0},
+	};
+	int indices[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+	unsigned int remaining = 8;
+	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
+		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
+			int values[8], highest = -1;
+			for(unsigned int k = 0; k < remaining; ++k) {
+				int *matrix = matrices[indices[k]];
+				values[k] = in.cells[matrix[0] + matrix[1] * i + matrix[2] * j][matrix[3] + matrix[4] * i + matrix[5] * j];
+				if(values[k] > highest)
+					highest = values[k];
+			}
+			for(unsigned int k = remaining; k > 0; ) {
+				--k;
+				if(values[k] != highest) {
+					--remaining;
+					indices[k] = indices[remaining];
+				}
+			}
+			if(remaining == 1)
+				goto done;
+		}
+	}
+	assert(remaining > 1);
+	done:
+	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
+		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
+			int *matrix = matrices[indices[0]];
+			out->cells[i][j] = in.cells[matrix[0] + matrix[1] * i + matrix[2] * j][matrix[3] + matrix[4] * i + matrix[5] * j];
+		}
+	}
+}
+
 inline __attribute__((always_inline))
 bool CanMoveRow(const cell_t* row_in, int stride) {
 	for(unsigned int i = 0; i < FIELD_SIZE - 1; ++i) {

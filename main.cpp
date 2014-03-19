@@ -54,7 +54,7 @@ void PlayTest() {
 }
 
 void MinimaxTest() {
-	MinimaxBestScore(25);
+	MinimaxBestScore(20, 30, 2);
 }
 
 int main() {

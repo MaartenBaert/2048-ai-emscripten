@@ -32,5 +32,8 @@ struct Field {
 void ClearField(Field* out);
 void PrintField(const Field& in);
 
+void NormalizeField(Field* out, const Field& in);
+
 bool ApplyGravity(Field* out, const Field& in, enum_direction direction, int* score);
 bool InsertBlock(Field* out, const Field& in, unsigned int location, unsigned int value);
+
