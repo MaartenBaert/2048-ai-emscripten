@@ -7,32 +7,29 @@
 #include <vector>
 #include <unordered_map>
 
+#define HEURISTIC_CACHE_STOP 6 // must be at least 1
+
 #define SCORE_MIN -1000000000
 #define SCORE_MAX 1000000000
 
-struct PositionComputer {
-	Field field;
-	unsigned int moves_left;
-	bool operator==(const PositionComputer& other) const {
-		return (field == other.field && moves_left == other.moves_left);
-	}
-};
-struct PositionComputerResult {
-	int normalized_score_lo, normalized_score_hi;
+struct CachedResult {
+	int score_lo, score_hi;
+	unsigned int best_move;
 };
 
 namespace std {
 template<>
-struct hash<PositionComputer> {
-	size_t operator()(const PositionComputer& pos) const {
+struct hash<Field> {
+	size_t operator()(const Field& field) const {
 		// FNV-1a hash
 		uint64_t h = 14695981039346656037ull;
+		//uint32_t h = 2166136261;
 		for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 			for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
-				h = (h ^ pos.field.cells[i][j]) * 1099511628211ull;
+				h = (h ^ field.cells[i][j]) * 1099511628211ull;
+				//h = (h ^ field.cells[i][j]) * 16777619;
 			}
 		}
-		h = (h ^ pos.moves_left) * 1099511628211ull;
 		return h;
 	}
 };
@@ -41,8 +38,12 @@ struct hash<PositionComputer> {
 struct MinimaxHelpers {
 	std::vector<unsigned int> m_killermove_computer;
 	std::vector<unsigned int> m_killermove_player;
-	std::unordered_map<PositionComputer, PositionComputerResult> m_positioncache_computer;
-	unsigned int m_positioncache_computer_hit, m_positioncache_computer_partial, m_positioncache_computer_miss;
+	std::vector<std::unordered_map<Field, CachedResult> > m_cache_computer;
+	std::vector<std::unordered_map<Field, CachedResult> > m_cache_computer_prev;
+	unsigned int m_cachemove_hit, m_cachemove_miss;
+	unsigned int m_killermove_hit, m_killermove_miss;
+	unsigned int m_cache_computer_hit, m_cache_computer_partial, m_cache_computer_miss;
+	unsigned int m_dead_ends;
 };
 
 int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers);
@@ -86,57 +87,68 @@ int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int a
 		return 1000000;
 
 	// check the cache
-	auto cache = helpers->m_positioncache_computer.insert(std::make_pair<PositionComputer, PositionComputerResult>({field, moves_left}, {0, 0}));
-	PositionComputerResult &cache_result = cache.first->second;
+	CachedResult dummy;
+	auto cache = helpers->m_cache_computer[moves_left - 1].emplace(field, dummy);
+	CachedResult &cache_result = cache.first->second;
 	if(cache.second) {
-		++helpers->m_positioncache_computer_miss;
+		++helpers->m_cache_computer_miss;
 
 		int result = MinimaxTurnComputer(field, moves_left, alpha, beta, helpers);
 		if(result <= alpha) {
-			cache_result.normalized_score_lo = SCORE_MIN;
-			cache_result.normalized_score_hi = result;
+			cache_result.score_lo = SCORE_MIN;
+			cache_result.score_hi = result;
 		} else if(result >= beta) {
-			cache_result.normalized_score_lo = result;
-			cache_result.normalized_score_hi = SCORE_MAX;
+			cache_result.score_lo = result;
+			cache_result.score_hi = SCORE_MAX;
 		} else {
-			cache_result.normalized_score_lo = result;
-			cache_result.normalized_score_hi = result;
+			cache_result.score_lo = result;
+			cache_result.score_hi = result;
 		}
+		cache_result.best_move = helpers->m_killermove_computer[moves_left - 1];
+
+		if(cache_result.score_hi < 1000000)
+			++helpers->m_dead_ends;
+
 		return result;
 
 	} else {
-		++helpers->m_positioncache_computer_hit;
+		++helpers->m_cache_computer_hit;
 
-		if(cache_result.normalized_score_hi <= alpha)
-			return cache_result.normalized_score_hi;
-		if(cache_result.normalized_score_lo >= beta)
-			return cache_result.normalized_score_lo;
-		if(cache_result.normalized_score_lo > alpha && cache_result.normalized_score_hi < beta)
-			return cache_result.normalized_score_lo;
+		if(cache_result.score_hi <= alpha)
+			return cache_result.score_hi;
+		if(cache_result.score_lo >= beta)
+			return cache_result.score_lo;
+		if(cache_result.score_lo > alpha && cache_result.score_hi < beta)
+			return cache_result.score_lo;
 
-		--helpers->m_positioncache_computer_hit;
-		++helpers->m_positioncache_computer_partial;
+		--helpers->m_cache_computer_hit;
+		++helpers->m_cache_computer_partial;
 
-		if(cache_result.normalized_score_lo > alpha)
-			alpha = cache_result.normalized_score_lo;
-		if(cache_result.normalized_score_hi < beta)
-			beta = cache_result.normalized_score_hi;
+		if(cache_result.score_lo > alpha)
+			alpha = cache_result.score_lo;
+		if(cache_result.score_hi < beta)
+			beta = cache_result.score_hi;
 
 		int result = MinimaxTurnComputer(field, moves_left, alpha, beta, helpers);
-		assert(result >= cache_result.normalized_score_lo);
-		assert(result <= cache_result.normalized_score_hi);
+		assert(result >= cache_result.score_lo);
+		assert(result <= cache_result.score_hi);
 		if(result <= alpha) {
-			if(cache_result.normalized_score_hi > result)
-				cache_result.normalized_score_hi = result;
+			if(cache_result.score_hi > result)
+				cache_result.score_hi = result;
 		} else if(result >= beta) {
-			if(cache_result.normalized_score_lo < result)
-				cache_result.normalized_score_lo = result;
+			if(cache_result.score_lo < result)
+				cache_result.score_lo = result;
 		} else {
-			if(cache_result.normalized_score_lo < result)
-				cache_result.normalized_score_lo = result;
-			if(cache_result.normalized_score_hi > result)
-				cache_result.normalized_score_hi = result;
+			if(cache_result.score_lo < result)
+				cache_result.score_lo = result;
+			if(cache_result.score_hi > result)
+				cache_result.score_hi = result;
 		}
+		cache_result.best_move = helpers->m_killermove_computer[moves_left - 1];
+
+		if(cache_result.score_hi < 1000000)
+			++helpers->m_dead_ends;
+
 		return result;
 
 	}
@@ -147,11 +159,30 @@ int MinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, 
 	/*if(moves_left == 0)
 		return 1000000;*/
 	assert(moves_left != 0);
+
+	unsigned int cachemove = -1;
+	if(moves_left > HEURISTIC_CACHE_STOP) {
+		auto prev_cache = helpers->m_cache_computer_prev[moves_left - 2].find(field);
+		if(prev_cache != helpers->m_cache_computer_prev[moves_left - 2].end()) {
+			cachemove = prev_cache->second.best_move;
+			if(TurnComputer(field, moves_left, alpha, beta, helpers, cachemove)) {
+				++helpers->m_cachemove_hit;
+				return beta;
+			}
+			++helpers->m_cachemove_miss;
+		}
+	}
+
 	unsigned int killermove = helpers->m_killermove_computer[moves_left - 1];
-	if(TurnComputer(field, moves_left, alpha, beta, helpers, killermove))
-		return beta;
+	if(killermove != cachemove) {
+		if(TurnComputer(field, moves_left, alpha, beta, helpers, killermove)) {
+			++helpers->m_killermove_hit;
+			return beta;
+		}
+		++helpers->m_killermove_miss;
+	}
 	for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-		if(location == killermove)
+		if(location == killermove || location == cachemove)
 			continue;
 		if(TurnComputer(field, moves_left, alpha, beta, helpers, location))
 			return beta;
@@ -163,11 +194,8 @@ int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, in
 	assert(moves_left != 0);
 	if(0 > alpha) {
 		alpha = 0;
-		//assert(alpha < beta); // this branch is never pruned
-		if(alpha >= beta) {
-			std::cerr << "no-move pruned!" << std::endl;
+		if(alpha >= beta)
 			return alpha;
-		}
 	}
 	unsigned int killermove = killermoves->m_killermove_player[moves_left - 1];
 	if(TurnPlayer(field, moves_left, alpha, beta, killermoves, killermove))
@@ -181,29 +209,55 @@ int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, in
 	return alpha;
 }
 
-int MinimaxBestScore(unsigned int moves) {
+int MinimaxBestScore(unsigned int max_moves) {
 
-	// initialize killer moves
-	MinimaxHelpers helpers;
-	helpers.m_killermove_computer.resize(moves, 0);
-	helpers.m_killermove_player.resize(moves, 0);
-	helpers.m_positioncache_computer_hit = 0;
-	helpers.m_positioncache_computer_partial = 0;
-	helpers.m_positioncache_computer_miss = 0;
+	std::vector<std::unordered_map<Field, CachedResult> > cache_computer_prev;
 
-	// initialize field
-	Field field;
-	ClearField(&field);
+	int score = 0;
+	for(unsigned int moves = 1; moves <= max_moves; ++moves) {
 
-	// run minimax
-	int score = CachedMinimaxTurnComputer(field, moves, SCORE_MIN, SCORE_MAX, &helpers);
+		// initialize helpers
+		MinimaxHelpers helpers;
+		helpers.m_killermove_computer.resize(moves, 0);
+		helpers.m_killermove_player.resize(moves, 0);
+		helpers.m_cache_computer.resize(moves);
+		helpers.m_cache_computer_prev = std::move(cache_computer_prev);
 
-	// print stats
-	std::cerr << "**** Cache size: " << helpers.m_positioncache_computer.size()
-			  << ", Hit: " << helpers.m_positioncache_computer_hit
-			  << ", Partial: " << helpers.m_positioncache_computer_partial
-			  << ", Miss: " << helpers.m_positioncache_computer_miss
-			  << std::endl;
+		// reset stats
+		helpers.m_cachemove_hit = 0;
+		helpers.m_cachemove_miss = 0;
+		helpers.m_killermove_hit = 0;
+		helpers.m_killermove_miss = 0;
+		helpers.m_cache_computer_hit = 0;
+		helpers.m_cache_computer_partial = 0;
+		helpers.m_cache_computer_miss = 0;
+		helpers.m_dead_ends = 0;
+
+		// initialize field
+		Field field;
+		ClearField(&field);
+
+		// run minimax
+		score = CachedMinimaxTurnComputer(field, moves, SCORE_MIN, SCORE_MAX, &helpers);
+
+		// print stats
+		std::cerr << "Moves: " << moves << ", Best score: " << score << std::endl;
+		std::cerr << "**** Cache move - hit=" << helpers.m_cachemove_hit
+				  << " miss=" << helpers.m_cachemove_miss
+				  << std::endl;
+		std::cerr << "**** Killer move - hit=" << helpers.m_killermove_hit
+				  << " miss=" << helpers.m_killermove_miss
+				  << std::endl;
+		std::cerr << "**** Cache - hit=" << helpers.m_cache_computer_hit
+				  << " partial=" << helpers.m_cache_computer_partial
+				  << " miss=" << helpers.m_cache_computer_miss
+				  << " deadend=" << helpers.m_dead_ends
+				  << std::endl;
+
+		// save cache
+		cache_computer_prev = std::move(helpers.m_cache_computer);
+
+	}
 
 	return score;
 }

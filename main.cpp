@@ -54,12 +54,7 @@ void PlayTest() {
 }
 
 void MinimaxTest() {
-
-	for(unsigned int moves = 1; moves <= 25; ++moves) {
-		unsigned int score = MinimaxBestScore(moves);
-		std::cerr << "Moves: " << moves << ", Best score: " << score << std::endl;
-	}
-
+	MinimaxBestScore(25);
 }
 
 int main() {

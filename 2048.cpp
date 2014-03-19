@@ -135,10 +135,6 @@ bool InsertBlock(Field* out, const Field& in, unsigned int location, unsigned in
 		*out = in;
 		out->cells[i][j] = value;
 		return true;
-	/*} else if(in.cells[i][j] == value) {
-		*out = in;
-		out->cells[i][j] = value + 1;
-		return true;*/
 	}
 	return false;
 }
