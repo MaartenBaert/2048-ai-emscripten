@@ -36,7 +36,8 @@ struct MinimaxHelpers {
 	std::vector<unsigned int> m_killermove_computer;
 	std::vector<unsigned int> m_killermove_player;
 	std::vector<std::unordered_map<Field, CachedResult> > m_cache_computer;
-	unsigned int m_killermove_hit, m_killermove_miss;
+	unsigned int m_killermove_computer_hit, m_killermove_computer_miss;
+	unsigned int m_killermove_player_hit, m_killermove_player_miss;
 	unsigned int m_cache_computer_hit, m_cache_computer_partial, m_cache_computer_miss;
 	unsigned int m_dead_ends;
 };
@@ -51,7 +52,7 @@ bool TurnComputer(const Field& field, unsigned int moves_left, int alpha, int& b
 	if(InsertBlock(&newfield, field, location, 1)) {
 		int score = MinimaxTurnPlayer(newfield, moves_left, alpha, beta, helpers);
 		if(score < beta) {
-			helpers->m_killermove_computer[moves_left - 1] = location;
+			//helpers->m_killermove_computer[moves_left - 1] = location;
 			beta = score;
 			if(beta <= alpha)
 				return true;
@@ -63,12 +64,12 @@ bool TurnComputer(const Field& field, unsigned int moves_left, int alpha, int& b
 inline __attribute__((always_inline))
 bool TurnPlayer(const Field& field, unsigned int moves_left, int& alpha, int beta, MinimaxHelpers* helpers, unsigned int direction) {
 	Field newfield;
-	int newscore = 0;
-	if(ApplyGravity(&newfield, field, (enum_direction) direction, &newscore)) {
-		newscore += CachedMinimaxTurnComputer(newfield, moves_left - 1, alpha - newscore, beta - newscore, helpers);
-		if(newscore > alpha) {
+	int score = 0;
+	if(ApplyGravity(&newfield, field, (enum_direction) direction, &score)) {
+		score += CachedMinimaxTurnComputer(newfield, moves_left - 1, alpha - score, beta - score, helpers);
+		if(score > alpha) {
 			helpers->m_killermove_player[moves_left - 1] = direction;
-			alpha = newscore;
+			alpha = score;
 			if(alpha >= beta)
 				return true;
 		}
@@ -153,38 +154,39 @@ int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int a
 }
 
 int MinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers) {
-	/*if(moves_left == 0)
-		return 1000000;*/
 	assert(moves_left != 0);
-	unsigned int killermove = helpers->m_killermove_computer[moves_left - 1];
+	/*unsigned int killermove = helpers->m_killermove_computer[moves_left - 1];
 	if(TurnComputer(field, moves_left, alpha, beta, helpers, killermove)) {
-		++helpers->m_killermove_hit;
+		++helpers->m_killermove_computer_hit;
 		return beta;
 	}
-	++helpers->m_killermove_miss;
+	++helpers->m_killermove_computer_miss;*/
 	for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-		if(location == killermove)
-			continue;
+		/*if(location == killermove)
+			continue;*/
 		if(TurnComputer(field, moves_left, alpha, beta, helpers, location))
 			return beta;
 	}
 	return beta;
 }
 
-int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* killermoves) {
+int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers) {
 	assert(moves_left != 0);
 	if(0 > alpha) {
 		alpha = 0;
 		if(alpha >= beta)
 			return alpha;
 	}
-	unsigned int killermove = killermoves->m_killermove_player[moves_left - 1];
-	if(TurnPlayer(field, moves_left, alpha, beta, killermoves, killermove))
+	unsigned int killermove = helpers->m_killermove_player[moves_left - 1];
+	if(TurnPlayer(field, moves_left, alpha, beta, helpers, killermove)) {
+		++helpers->m_killermove_player_hit;
 		return alpha;
+	}
+	++helpers->m_killermove_player_miss;
 	for(unsigned int direction = 0; direction < 4; ++direction) {
 		if(direction == killermove)
 			continue;
-		if(TurnPlayer(field, moves_left, alpha, beta, killermoves, direction))
+		if(TurnPlayer(field, moves_left, alpha, beta, helpers, direction))
 			return alpha;
 	}
 	return alpha;
@@ -202,8 +204,10 @@ int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned in
 		helpers.m_cache_computer.resize(moves);
 
 		// reset stats
-		helpers.m_killermove_hit = 0;
-		helpers.m_killermove_miss = 0;
+		helpers.m_killermove_computer_hit = 0;
+		helpers.m_killermove_computer_miss = 0;
+		helpers.m_killermove_player_hit = 0;
+		helpers.m_killermove_player_miss = 0;
 		helpers.m_cache_computer_hit = 0;
 		helpers.m_cache_computer_partial = 0;
 		helpers.m_cache_computer_miss = 0;
@@ -218,8 +222,11 @@ int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned in
 
 		// print stats
 		std::cerr << "Moves: " << moves << ", Best score: " << score << std::endl;
-		std::cerr << "**** Killer move - hit=" << helpers.m_killermove_hit
-				  << " miss=" << helpers.m_killermove_miss
+		std::cerr << "**** Killermove computer - hit=" << helpers.m_killermove_computer_hit
+				  << " miss=" << helpers.m_killermove_computer_miss
+				  << std::endl;
+		std::cerr << "**** Killermove player - hit=" << helpers.m_killermove_player_hit
+				  << " miss=" << helpers.m_killermove_player_miss
 				  << std::endl;
 		std::cerr << "**** Cache - hit=" << helpers.m_cache_computer_hit
 				  << " partial=" << helpers.m_cache_computer_partial
