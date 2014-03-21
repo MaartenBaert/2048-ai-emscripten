@@ -4,65 +4,82 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <future>
 #include <iostream>
+#include <random>
 
-void PlayTest() {
+int MinimaxPlayTest() {
+	std::cout << "---- BEGIN MinimaxPlayTest ----" << std::endl;
 
-	srand(clock());
+	std::mt19937 rng(clock());
 
-	Field a;
+	Field a, b;
 	ClearField(&a);
 
 	int score = 0;
 	for(unsigned int move = 0; move < 1000000; ++move) {
-		Field b;
+		//std::cout << "Move: " << move << ", Score: " << score << std::endl;
 
 		bool done = false;
 		for(unsigned int i = 0; i < 1000; ++i) {
-			if(InsertBlock(&b, a, rand() % (FIELD_SIZE * FIELD_SIZE), 1)) {
+			if(InsertBlock(&b, a, rng() % (FIELD_SIZE * FIELD_SIZE), (rng() % 10 == 0)? 2 : 1)) {
 				done = true;
 				break;
 			}
 		}
 		if(!done) {
-			std::cerr << "Can't insert!" << std::endl;
+			std::cout << "Can't insert!" << std::endl;
 			break;
 		}
-		a = b;
-		PrintField(a);
+		//PrintField(b);
 
-		done = false;
-		for(unsigned int i = 0; i < 1000; ++i) {
-			enum_direction m = (enum_direction) (rand() % 4);
-			if(m == DIRECTION_UP && i < 500)
-				m = DIRECTION_DOWN;
-			if(ApplyGravity(&b, a, m, &score)) {
-				done = true;
-				break;
-			}
-		}
-		if(!done) {
-			std::cerr << "Can't move!" << std::endl;
+		//unsigned int usedcells = FIELD_SIZE * FIELD_SIZE - CountFreeCells(b);
+		//unsigned int moves = 8 + ((usedcells > 12)? usedcells - 12 : 0);
+		//unsigned int moves = 8 + score / 10000;
+		unsigned int direction = MinimaxBestMove(b, 8, false);
+		if(direction == (unsigned int) -1) {
+			std::cout << "No possible move!" << std::endl;
 			break;
 		}
-		a = b;
-		PrintField(a);
+		if(!ApplyGravity(&a, b, (enum_direction) direction, &score)) {
+			std::cout << "Move: " << move << ", Score: " << score << std::endl;
+			std::cout << "Can't move!" << std::endl;
+			break;
+		}
+		//PrintField(a);
 
-		std::cerr << "Moves: " << move + 1 << ", Score: " << score << std::endl;
 	}
 
+	std::cout << "---- END MinimaxPlayTest ----" << std::endl;
+	return score;
 }
 
-void MinimaxTest() {
-	MinimaxBestScore(20, 30, 2);
+void MinimaxPerfTest() {
+	MinimaxBestScore(1, 20, 2);
 }
+
+#define NUM_PLAYS 200
 
 int main() {
 
-	//PlayTest();
-	MinimaxTest();
+	//MinimaxPlayTest();
+	//MinimaxTest();
 
-	std::cerr << "Done!" << std::endl;
+	std::future<int> scores[NUM_PLAYS];
+	for(unsigned int p = 0; p < NUM_PLAYS; ++p) {
+		scores[p] = std::async(MinimaxPlayTest);
+	}
+	for(unsigned int p = 0; p < NUM_PLAYS; ++p) {
+		scores[p].wait();
+	}
+
+	std::cout << "scores = array([";
+	for(unsigned int p = 0; p < NUM_PLAYS; ++p) {
+		std::cout << scores[p].get() << ", ";
+	}
+	std::cout << "])" << std::endl;
+
+	std::cout << "Done!" << std::endl;
 	return 0;
 }
 

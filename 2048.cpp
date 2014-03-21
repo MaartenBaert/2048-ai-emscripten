@@ -15,14 +15,26 @@ void ClearField(Field* out) {
 
 void PrintField(const Field& in) {
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
-		std::cerr << "[";
+		std::cout << "[";
 		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
-			std::cerr.width(5);
-			std::cerr  << std::right << (1 << in.cells[i][j]);
+			uint8_t value = in.cells[i][j];
+			std::cout.width(5);
+			std::cout  << std::right << ((value == 0)? 0 : (1 << value));
 		}
-		std::cerr << " ]" << std::endl;
+		std::cout << " ]" << std::endl;
 	}
-	std::cerr << std::endl;
+	std::cout << std::endl;
+}
+
+unsigned int CountFreeCells(const Field& in) {
+	unsigned int count = 0;
+	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
+		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
+			if(in.cells[i][j] == 0)
+				++count;
+		}
+	}
+	return count;
 }
 
 void NormalizeField(Field* out, const Field& in) {

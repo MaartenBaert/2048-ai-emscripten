@@ -31,6 +31,7 @@ struct Field {
 
 void ClearField(Field* out);
 void PrintField(const Field& in);
+unsigned int CountFreeCells(const Field& in);
 
 void NormalizeField(Field* out, const Field& in);
 

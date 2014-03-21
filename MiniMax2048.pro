@@ -18,7 +18,8 @@ pg {
 
 SOURCES += main.cpp \
 	2048.cpp \
-	Minimax.cpp
+	Minimax.cpp \
+    JS_Minimax.cpp
 
 HEADERS += \
 	2048.h \
