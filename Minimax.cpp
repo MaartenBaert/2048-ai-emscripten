@@ -12,8 +12,6 @@
 #define SCORE_STILLALIVE   100000000
 #define SCORE_FREECELL       1000000
 #define SCORE_CENTEROFMASS        10
-//#define SCORE_PAIR_EQUAL           2
-//#define SCORE_PAIR_CLOSE           1
 
 struct CachedResult {
 	int score_lo, score_hi;
@@ -75,34 +73,6 @@ int HeuristicScore(const Field& field) {
 		}
 	}
 	score += (abs(ci) + abs(cj)) * SCORE_CENTEROFMASS;
-	/*for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
-		for(unsigned int j = 0; j < FIELD_SIZE - 1; ++j) {
-			uint8_t value1 = field.cells[i][j];
-			uint8_t value2 = field.cells[i][j + 1];
-			if(value1 != 0 && value2 != 0) {
-				if(value1 == value2)
-					score += (1 << value1) * SCORE_PAIR_EQUAL;
-				if(value1 == value2 + 1)
-					score += (1 << value1) * SCORE_PAIR_CLOSE;
-				if(value1 + 1 == value2)
-					score += (1 << value2) * SCORE_PAIR_CLOSE;
-			}
-		}
-	}
-	for(unsigned int i = 0; i < FIELD_SIZE - 1; ++i) {
-		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
-			uint8_t value1 = field.cells[i][j];
-			uint8_t value2 = field.cells[i + 1][j];
-			if(value1 != 0 && value2 != 0) {
-				if(value1 == value2)
-					score += (1 << value1) * SCORE_PAIR_EQUAL;
-				if(value1 == value2 + 1)
-					score += (1 << value1) * SCORE_PAIR_CLOSE;
-				if(value1 + 1 == value2)
-					score += (1 << value2) * SCORE_PAIR_CLOSE;
-			}
-		}
-	}*/
 	return score;
 }
 
