@@ -35,6 +35,6 @@ unsigned int CountFreeCells(const Field& in);
 
 void NormalizeField(Field* out, const Field& in);
 
-bool ApplyGravity(Field* out, const Field& in, enum_direction direction, int* score);
+bool ApplyGravity(Field* out, const Field& in, enum_direction direction, unsigned int *score);
 bool InsertBlock(Field* out, const Field& in, unsigned int location, unsigned int value);
 

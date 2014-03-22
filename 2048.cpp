@@ -94,7 +94,7 @@ bool CanMoveRow(const cell_t* row_in, int stride) {
 }
 
 inline __attribute__((always_inline))
-void MoveRow(cell_t* row_out, const cell_t* row_in, int stride, int* score) {
+void MoveRow(cell_t* row_out, const cell_t* row_in, int stride, unsigned int* score) {
 	unsigned int out = 0;
 	cell_t *row_out_end = row_out + stride * FIELD_SIZE;
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
@@ -124,7 +124,7 @@ void MoveRow(cell_t* row_out, const cell_t* row_in, int stride, int* score) {
 }
 
 inline __attribute__((always_inline))
-bool ApplyGravityUp(Field* out, const Field& in, int* score) {
+bool ApplyGravityUp(Field* out, const Field& in, unsigned int* score) {
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		if(CanMoveRow(&(in.cells[0][i]), FIELD_SIZE)) {
 			for(unsigned int j = 0; j < FIELD_SIZE; ++j)
@@ -137,7 +137,7 @@ bool ApplyGravityUp(Field* out, const Field& in, int* score) {
 }
 
 inline __attribute__((always_inline))
-bool ApplyGravityDown(Field* out, const Field& in, int* score) {
+bool ApplyGravityDown(Field* out, const Field& in, unsigned int* score) {
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		if(CanMoveRow(&(in.cells[FIELD_SIZE - 1][i]), -FIELD_SIZE)) {
 			for(unsigned int j = 0; j < FIELD_SIZE; ++j)
@@ -150,7 +150,7 @@ bool ApplyGravityDown(Field* out, const Field& in, int* score) {
 }
 
 inline __attribute__((always_inline))
-bool ApplyGravityLeft(Field* out, const Field& in, int* score) {
+bool ApplyGravityLeft(Field* out, const Field& in, unsigned int* score) {
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		if(CanMoveRow(&(in.cells[i][0]), 1)) {
 			for(unsigned int j = 0; j < FIELD_SIZE; ++j)
@@ -163,7 +163,7 @@ bool ApplyGravityLeft(Field* out, const Field& in, int* score) {
 }
 
 inline __attribute__((always_inline))
-bool ApplyGravityRight(Field* out, const Field& in, int* score) {
+bool ApplyGravityRight(Field* out, const Field& in, unsigned int* score) {
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		if(CanMoveRow(&(in.cells[i][FIELD_SIZE - 1]), -1)) {
 			for(unsigned int j = 0; j < FIELD_SIZE; ++j)
@@ -175,7 +175,7 @@ bool ApplyGravityRight(Field* out, const Field& in, int* score) {
 	return false;
 }
 
-bool ApplyGravity(Field* out, const Field& in, enum_direction direction, int* score) {
+bool ApplyGravity(Field* out, const Field& in, enum_direction direction, unsigned int* score) {
 	switch(direction) {
 		case DIRECTION_UP: return ApplyGravityUp(out, in, score);
 		case DIRECTION_DOWN: return ApplyGravityDown(out, in, score);

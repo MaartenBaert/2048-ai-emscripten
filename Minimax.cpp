@@ -1,21 +1,22 @@
 #include "Minimax.h"
 
 #include <cassert>
+#include <ctime>
 
 #include <iostream>
 #include <limits>
-#include <vector>
+#include <random>
 #include <unordered_map>
+#include <vector>
 
-#define SCORE_MIN        -1000000000
-#define SCORE_MAX         1000000000
-#define SCORE_STILLALIVE   100000000
-#define SCORE_FREECELL       1000000
-#define SCORE_CENTEROFMASS        10
-
-struct CachedResult {
-	int score_lo, score_hi;
-};
+void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
+	/*parameters->m_score_stillalive = 100000;
+	parameters->m_score_freecell = 10000;
+	parameters->m_score_centerofmass = 10;*/
+	parameters->m_score_stillalive = 23000;
+	parameters->m_score_freecell = 3000;
+	parameters->m_score_centerofmass = 2;
+}
 
 namespace std {
 template<>
@@ -35,87 +36,74 @@ struct hash<Field> {
 };
 }
 
+struct CachedResult {
+	unsigned int m_score;
+};
+
 struct MinimaxHelpers {
-	std::vector<unsigned int> m_killermove_computer;
-	std::vector<unsigned int> m_killermove_player;
+	HeuristicParameters m_parameters;
+	std::mt19937 m_rng;
 	std::vector<std::unordered_map<Field, CachedResult> > m_cache_computer;
-	/*unsigned int m_killermove_computer_hit, m_killermove_computer_miss;*/
-	unsigned int m_killermove_player_hit, m_killermove_player_miss;
-	unsigned int m_cache_computer_hit, m_cache_computer_partial, m_cache_computer_miss;
-	unsigned int m_dead_ends;
-	inline MinimaxHelpers(unsigned int moves) {
-		m_killermove_computer.resize(moves, 0);
-		m_killermove_player.resize(moves, 0);
+	unsigned int m_cache_computer_hit, m_cache_computer_miss;
+	inline MinimaxHelpers(const HeuristicParameters& parameters, unsigned int moves) {
+		m_parameters = parameters;
+		m_rng.seed(clock());
 		m_cache_computer.resize(moves);
-		/*m_killermove_computer_hit = 0;
-		m_killermove_computer_miss = 0;*/
-		m_killermove_player_hit = 0;
-		m_killermove_player_miss = 0;
 		m_cache_computer_hit = 0;
-		m_cache_computer_partial = 0;
 		m_cache_computer_miss = 0;
-		m_dead_ends = 0;
 	}
 };
 
-int HeuristicScore(const Field& field) {
-	int score = SCORE_STILLALIVE;
+unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
+	unsigned int score = helpers->m_parameters.m_score_stillalive;
 	int ci = 0, cj = 0;
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
 			uint8_t value = field.cells[i][j];
 			if(value == 0) {
-				score += SCORE_FREECELL;
+				score += helpers->m_parameters.m_score_freecell;
 			} else {
 				ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value;
 				cj += ((int) j * 2 - (FIELD_SIZE - 1)) * value;
 			}
 		}
 	}
-	score += (abs(ci) + abs(cj)) * SCORE_CENTEROFMASS;
+	score += (abs(ci) + abs(cj)) * helpers->m_parameters.m_score_centerofmass;
 	return score;
 }
 
-int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers);
-int MinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers);
-int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers);
+unsigned int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers);
+unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers);
+unsigned int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers);
 
 inline __attribute__((always_inline))
-bool TurnComputer(const Field& field, unsigned int moves_left, int alpha, int& beta, MinimaxHelpers* helpers, unsigned int location) {
+void TurnComputer(const Field& field, unsigned int moves_left, unsigned int& score_sum, unsigned int& score_div, MinimaxHelpers* helpers, unsigned int location, unsigned int value) {
 	Field newfield;
-	if(InsertBlock(&newfield, field, location, 1)) {
-		int score = MinimaxTurnPlayer(newfield, moves_left, alpha, beta, helpers);
-		if(score < beta) {
-			//helpers->m_killermove_computer[moves_left - 1] = location;
-			beta = score;
-			if(beta <= alpha)
-				return true;
-		}
+	if(InsertBlock(&newfield, field, location, value)) {
+		score_sum += MinimaxTurnPlayer(newfield, moves_left, helpers);
+		++score_div;
 	}
-	return false;
 }
 
 inline __attribute__((always_inline))
-bool TurnPlayer(const Field& field, unsigned int moves_left, int& alpha, int beta, MinimaxHelpers* helpers, unsigned int direction) {
+bool TurnPlayer(const Field& field, unsigned int moves_left, unsigned int& best_score, MinimaxHelpers* helpers, unsigned int direction) {
 	Field newfield;
-	int score = 0;
+	unsigned int score = 0;
 	if(ApplyGravity(&newfield, field, (enum_direction) direction, &score)) {
-		score += CachedMinimaxTurnComputer(newfield, moves_left - 1, alpha - score, beta - score, helpers);
-		if(score > alpha) {
-			helpers->m_killermove_player[moves_left - 1] = direction;
-			alpha = score;
-			if(alpha >= beta)
-				return true;
+		score += CachedMinimaxTurnComputer(newfield, moves_left - 1, helpers);
+		if(score > best_score) {
+			best_score = score;
+			return true;
 		}
 	}
 	return false;
 }
 
-int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers) {
+unsigned int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers) {
 
 	// maximum depth reached?
 	if(moves_left == 0)
-		return HeuristicScore(field);
+		return HeuristicScore(field, helpers);
 
 	// normalize the field
 	Field normfield;
@@ -127,131 +115,89 @@ int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, int a
 	CachedResult &cache_result = cache.first->second;
 	if(cache.second) {
 		++helpers->m_cache_computer_miss;
-
-		int result = MinimaxTurnComputer(normfield, moves_left, alpha, beta, helpers);
-		if(result <= alpha) {
-			cache_result.score_lo = SCORE_MIN;
-			cache_result.score_hi = result;
-		} else if(result >= beta) {
-			cache_result.score_lo = result;
-			cache_result.score_hi = SCORE_MAX;
-		} else {
-			cache_result.score_lo = result;
-			cache_result.score_hi = result;
-		}
-
-		if(cache_result.score_hi < SCORE_STILLALIVE)
-			++helpers->m_dead_ends;
-
-		return result;
-
+		unsigned int score = MinimaxTurnComputer(normfield, moves_left, helpers);
+		cache_result.m_score = score;
+		return score;
 	} else {
 		++helpers->m_cache_computer_hit;
+		return cache_result.m_score;
+	}
 
-		if(cache_result.score_hi <= alpha)
-			return cache_result.score_hi;
-		if(cache_result.score_lo >= beta)
-			return cache_result.score_lo;
-		if(cache_result.score_lo > alpha && cache_result.score_hi < beta)
-			return cache_result.score_lo;
+}
 
-		--helpers->m_cache_computer_hit;
-		++helpers->m_cache_computer_partial;
-
-		if(cache_result.score_lo > alpha)
-			alpha = cache_result.score_lo;
-		if(cache_result.score_hi < beta)
-			beta = cache_result.score_hi;
-
-		int result = MinimaxTurnComputer(normfield, moves_left, alpha, beta, helpers);
-		assert(result >= cache_result.score_lo);
-		assert(result <= cache_result.score_hi);
-		if(result <= alpha) {
-			if(cache_result.score_hi > result)
-				cache_result.score_hi = result;
-		} else if(result >= beta) {
-			if(cache_result.score_lo < result)
-				cache_result.score_lo = result;
-		} else {
-			if(cache_result.score_lo < result)
-				cache_result.score_lo = result;
-			if(cache_result.score_hi > result)
-				cache_result.score_hi = result;
+unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers) {
+	assert(moves_left != 0);
+	unsigned int locations[FIELD_SIZE * FIELD_SIZE], location_count = 0;
+	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
+		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
+			if(field.cells[i][j] == 0) {
+				locations[location_count] = i * FIELD_SIZE + j;
+				++location_count;
+			}
 		}
-
-		if(cache_result.score_hi < SCORE_STILLALIVE)
-			++helpers->m_dead_ends;
-
-		return result;
-
 	}
-
+	unsigned int todo = std::min(1u << moves_left, location_count);
+	if(location_count > 3) {
+		unsigned int score_sum = 0, score_div = 0;
+		for(unsigned int k = 0; k < todo; ++k) {
+			unsigned int p = helpers->m_rng() % location_count;
+			unsigned int location = locations[p];
+			TurnComputer(field, moves_left, score_sum, score_div, helpers, location, (helpers->m_rng() % 10 == 0)? 2 : 1);
+			--location_count;
+			locations[p] = locations[location_count];
+		}
+		/*for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
+			TurnComputer(field, moves_left, score_sum, score_div, helpers, location, (helpers->m_rng() % 10 == 0)? 2 : 1);
+		}*/
+		assert(score_div != 0);
+		return (score_sum + score_div / 2) / score_div;
+	} else {
+		unsigned int score1_sum = 0, score1_div = 0;
+		unsigned int score2_sum = 0, score2_div = 0;
+		for(unsigned int k = 0; k < todo; ++k) {
+			unsigned int p = helpers->m_rng() % location_count;
+			unsigned int location = locations[p];
+			TurnComputer(field, moves_left, score1_sum, score1_div, helpers, location, 1);
+			TurnComputer(field, moves_left, score2_sum, score2_div, helpers, location, 2);
+			--location_count;
+			locations[p] = locations[location_count];
+		}
+		/*for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
+			TurnComputer(field, moves_left, score1_sum, score1_div, helpers, location, 1);
+			TurnComputer(field, moves_left, score2_sum, score2_div, helpers, location, 2);
+		}*/
+		unsigned int score_sum = score1_sum * 9 + score2_sum, score_div = score1_div * 9 + score2_div;
+		assert(score_div != 0);
+		return (score_sum + score_div / 2) / score_div;
+	}
 }
 
-int MinimaxTurnComputer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers) {
+unsigned int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers) {
 	assert(moves_left != 0);
-	/*unsigned int killermove = helpers->m_killermove_computer[moves_left - 1];
-	if(TurnComputer(field, moves_left, alpha, beta, helpers, killermove)) {
-		++helpers->m_killermove_computer_hit;
-		return beta;
-	}
-	++helpers->m_killermove_computer_miss;*/
-	for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-		/*if(location == killermove)
-			continue;*/
-		if(TurnComputer(field, moves_left, alpha, beta, helpers, location))
-			return beta;
-	}
-	return beta;
-}
-
-int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, int alpha, int beta, MinimaxHelpers* helpers) {
-	assert(moves_left != 0);
-	if(0 > alpha) {
-		alpha = 0;
-		if(alpha >= beta)
-			return alpha;
-	}
-	unsigned int killermove = helpers->m_killermove_player[moves_left - 1];
-	if(TurnPlayer(field, moves_left, alpha, beta, helpers, killermove)) {
-		++helpers->m_killermove_player_hit;
-		return alpha;
-	}
-	++helpers->m_killermove_player_miss;
+	unsigned int best_score = 0;
 	for(unsigned int direction = 0; direction < 4; ++direction) {
-		if(direction == killermove)
-			continue;
-		if(TurnPlayer(field, moves_left, alpha, beta, helpers, direction))
-			return alpha;
+		TurnPlayer(field, moves_left, best_score, helpers, direction);
 	}
-	return alpha;
+	return best_score;
 }
 
-int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned int step) {
+unsigned int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned int step, const HeuristicParameters& parameters) {
 
-	int score = 0;
+	unsigned int score = 0;
 	for(unsigned int moves = min_moves; moves <= max_moves; moves += step) {
 
 		// initialize
-		MinimaxHelpers helpers(moves);
+		MinimaxHelpers helpers(parameters, moves);
 		Field field;
 		ClearField(&field);
 
 		// run minimax
-		score = CachedMinimaxTurnComputer(field, moves, SCORE_MIN, SCORE_MAX, &helpers);
+		score = CachedMinimaxTurnComputer(field, moves, &helpers);
 
 		// print stats
 		std::cout << "Moves: " << moves << ", Best score: " << score << std::endl;
-		/*std::cout << "**** Killermove computer - hit=" << helpers.m_killermove_computer_hit
-				  << " miss=" << helpers.m_killermove_computer_miss
-				  << std::endl;*/
-		std::cout << "**** Killermove player - hit=" << helpers.m_killermove_player_hit
-				  << " miss=" << helpers.m_killermove_player_miss
-				  << std::endl;
 		std::cout << "**** Cache computer - hit=" << helpers.m_cache_computer_hit
-				  << " partial=" << helpers.m_cache_computer_partial
 				  << " miss=" << helpers.m_cache_computer_miss
-				  << " deadend=" << helpers.m_dead_ends
 				  << std::endl;
 
 	}
@@ -259,36 +205,19 @@ int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned in
 	return score;
 }
 
-unsigned int MinimaxBestMove(const Field& field, unsigned int max_moves, bool computer_starts) {
-	MinimaxHelpers helpers(max_moves);
-
-	int alpha = SCORE_MIN, beta = SCORE_MAX;
-	unsigned int best_move= -1;
-
-	if(computer_starts) {
-		for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-			Field newfield;
-			if(InsertBlock(&newfield, field, location, 1)) {
-				int score = MinimaxTurnPlayer(newfield, max_moves, alpha, beta, &helpers);
-				if(score < beta) {
-					beta = score;
-					best_move = location;
-				}
-			}
-		}
-	} else {
-		for(unsigned int direction = 0; direction < 4; ++direction) {
-			Field newfield;
-			int score = 0;
-			if(ApplyGravity(&newfield, field, (enum_direction) direction, &score)) {
-				score += CachedMinimaxTurnComputer(newfield, max_moves - 1, alpha - score, beta - score, &helpers);
-				if(score > alpha) {
-					alpha = score;
-					best_move = direction;
-				}
+unsigned int MinimaxBestMove(const Field& field, unsigned int moves, const HeuristicParameters& parameters) {
+	MinimaxHelpers helpers(parameters, moves);
+	unsigned int best_score = 0, best_move = (unsigned int) -1;
+	for(unsigned int direction = 0; direction < 4; ++direction) {
+		Field newfield;
+		unsigned int score = 0;
+		if(ApplyGravity(&newfield, field, (enum_direction) direction, &score)) {
+			score += CachedMinimaxTurnComputer(newfield, moves - 1, &helpers);
+			if(score > best_score || best_move == (unsigned int) -1) {
+				best_score = score;
+				best_move = direction;
 			}
 		}
 	}
-
 	return best_move;
 }
