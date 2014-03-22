@@ -146,7 +146,7 @@ unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, Mi
 			}
 		}
 	}
-	unsigned int todo = std::min(1u << moves_left, location_count);
+	unsigned int todo = std::min(1u << (moves_left - 1), location_count);
 	if(location_count > 3) {
 		unsigned int score_sum = 0, score_div = 0;
 		for(unsigned int k = 0; k < todo; ++k) {
