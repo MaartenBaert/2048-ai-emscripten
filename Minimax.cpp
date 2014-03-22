@@ -10,12 +10,22 @@
 #include <vector>
 
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
+
+	// the original:
 	/*parameters->m_score_stillalive = 100000;
 	parameters->m_score_freecell = 10000;
 	parameters->m_score_centerofmass = 10;*/
-	parameters->m_score_stillalive = 23000;
+
+	// used by half4:
+	/*parameters->m_score_stillalive = 23000;
 	parameters->m_score_freecell = 3000;
-	parameters->m_score_centerofmass = 2;
+	parameters->m_score_centerofmass = 2;*/
+
+	// used by sq2
+	parameters->m_score_stillalive = 18000;
+	parameters->m_score_freecell = 2400;
+	parameters->m_score_centerofmass = 197;
+
 }
 
 namespace std {
@@ -63,12 +73,12 @@ unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
 			if(value == 0) {
 				score += helpers->m_parameters.m_score_freecell;
 			} else {
-				ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value;
-				cj += ((int) j * 2 - (FIELD_SIZE - 1)) * value;
+				ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value * value;
+				cj += ((int) j * 2 - (FIELD_SIZE - 1)) * value * value;
 			}
 		}
 	}
-	score += (abs(ci) + abs(cj)) * helpers->m_parameters.m_score_centerofmass;
+	score += ((abs(ci) + abs(cj)) * helpers->m_parameters.m_score_centerofmass) >> 8;
 	return score;
 }
 

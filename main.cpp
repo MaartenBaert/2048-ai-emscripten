@@ -49,11 +49,11 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 5
+#define SEARCH_DEPTH 6
 
 #define BATCH_PLAYS 100
 
-#define TUNE_PLAYS 1000
+#define TUNE_PLAYS 300
 #define TUNE_POPULATION 50
 #define TUNE_LATENCY 15
 
@@ -70,7 +70,7 @@ unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) 
 	Field a, b;
 	ClearField(&a);
 
-	unsigned int score = 0;
+	unsigned int score = 0, extended = 0;
 	for(unsigned int move = 0; move < 1000000; ++move) {
 		if(print)
 			std::cout << "Move: " << move << ", Score: " << score << std::endl;
@@ -90,9 +90,16 @@ unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) 
 		if(print)
 			PrintField(b);
 
-		unsigned int direction = MinimaxBestMove(b, SEARCH_DEPTH, parameters);
+		unsigned int moves = SEARCH_DEPTH;
+		if(CountFreeCells(b) < 3) {
+			++moves;
+			++extended;
+		}
+
+		unsigned int direction = MinimaxBestMove(b, moves, parameters);
 		if(direction == (unsigned int) -1) {
-			std::cout << "Game over - Move: " << move << ", Score: " << score << std::endl;
+			std::cout << "Game over - Move: " << move << ", Extended: " << extended << ", Score: " << score << std::endl;
+
 			break;
 		}
 		if(!ApplyGravity(&a, b, (enum_direction) direction, &score)) {
@@ -117,7 +124,7 @@ struct TuneElement {
 };
 
 int Mutate(int value, int low, int high, std::mt19937& rng) {
-	value += ((int) (rng()) % (2 * value + 1) - value) / 50;
+	value += ((int) (rng()) % (2 * value + 1) - value) / 20;
 	if(rng() % 5 == 0)
 		++value;
 	if(rng() % 5 == 0)
@@ -176,19 +183,28 @@ void MinimaxTuneTest() {
 		average_parameters.m_score_freecell = (sum_score_freecell + sum_weight / 2) / sum_weight;
 		average_parameters.m_score_centerofmass = (sum_score_centerofmass + sum_weight / 2) / sum_weight;
 
-		// do some mutations
-		average_parameters.m_score_stillalive = Mutate(average_parameters.m_score_stillalive, 0, 1000000, rng);
-		average_parameters.m_score_freecell = Mutate(average_parameters.m_score_freecell, 0, 1000000, rng);
-		average_parameters.m_score_centerofmass = Mutate(average_parameters.m_score_centerofmass, 0, 10000, rng);
-		std::cout << "Mutation: "
-				  << average_parameters.m_score_stillalive << " "
-				  << average_parameters.m_score_freecell << " "
-				  << average_parameters.m_score_centerofmass << std::endl;
-
-		// start the job
 		if(p < TUNE_PLAYS) {
+
+			// do some mutations
+			average_parameters.m_score_stillalive = Mutate(average_parameters.m_score_stillalive, 0, 1000000, rng);
+			average_parameters.m_score_freecell = Mutate(average_parameters.m_score_freecell, 0, 1000000, rng);
+			average_parameters.m_score_centerofmass = Mutate(average_parameters.m_score_centerofmass, 0, 10000, rng);
+			std::cout << "Mutation: "
+					  << average_parameters.m_score_stillalive << " "
+					  << average_parameters.m_score_freecell << " "
+					  << average_parameters.m_score_centerofmass << std::endl;
+
+			// start the job
 			play_parameters[p] = average_parameters;
 			play_scores[p] = StartJob(MinimaxPlayTest, false, average_parameters);
+
+		} else {
+
+			std::cout << "Average: "
+					  << average_parameters.m_score_stillalive << " "
+					  << average_parameters.m_score_freecell << " "
+					  << average_parameters.m_score_centerofmass << std::endl;
+
 		}
 
 	}
