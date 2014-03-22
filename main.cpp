@@ -70,7 +70,7 @@ unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) 
 	Field a, b;
 	ClearField(&a);
 
-	unsigned int score = 0, extended = 0;
+	unsigned int score = 0, extended = 0, shortened = 0;
 	for(unsigned int move = 0; move < 1000000; ++move) {
 		if(print)
 			std::cout << "Move: " << move << ", Score: " << score << std::endl;
@@ -90,16 +90,19 @@ unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) 
 		if(print)
 			PrintField(b);
 
-		unsigned int moves = SEARCH_DEPTH;
-		if(CountFreeCells(b) < 3) {
+		unsigned int moves = SEARCH_DEPTH, freecells = CountFreeCells(b);
+		if(freecells < 2) {
 			++moves;
 			++extended;
+		}
+		if(freecells > 5) {
+			--moves;
+			++shortened;
 		}
 
 		unsigned int direction = MinimaxBestMove(b, moves, parameters);
 		if(direction == (unsigned int) -1) {
-			std::cout << "Game over - Move: " << move << ", Extended: " << extended << ", Score: " << score << std::endl;
-
+			std::cout << "Game over - Move: " << move << ", Extended: " << extended << ", Shortened: " << shortened << ", Score: " << score << std::endl;
 			break;
 		}
 		if(!ApplyGravity(&a, b, (enum_direction) direction, &score)) {

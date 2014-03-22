@@ -156,9 +156,6 @@ unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, Mi
 			--location_count;
 			locations[p] = locations[location_count];
 		}
-		/*for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-			TurnComputer(field, moves_left, score_sum, score_div, helpers, location, (helpers->m_rng() % 10 == 0)? 2 : 1);
-		}*/
 		assert(score_div != 0);
 		return (score_sum + score_div / 2) / score_div;
 	} else {
@@ -172,10 +169,6 @@ unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, Mi
 			--location_count;
 			locations[p] = locations[location_count];
 		}
-		/*for(unsigned int location = 0; location < FIELD_SIZE * FIELD_SIZE; ++location) {
-			TurnComputer(field, moves_left, score1_sum, score1_div, helpers, location, 1);
-			TurnComputer(field, moves_left, score2_sum, score2_div, helpers, location, 2);
-		}*/
 		unsigned int score_sum = score1_sum * 9 + score2_sum, score_div = score1_div * 9 + score2_div;
 		assert(score_div != 0);
 		return (score_sum + score_div / 2) / score_div;

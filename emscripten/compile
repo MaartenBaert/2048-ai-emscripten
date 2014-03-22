@@ -2,4 +2,4 @@
 
 EMCC="/static/maarten/nobackup/build-from-source/emscripten/emcc"
 
-"$EMCC" -O3 -std=c++11 -DNDEBUG ../2048.cpp ../Minimax.cpp ../JS_Minimax.cpp -o MiniMax2048.html -s EXPORTED_FUNCTIONS="['_JS_MinimaxBestMove']"
+"$EMCC" -O3 -std=c++11 -DNDEBUG -s TOTAL_MEMORY=33554432 ../2048.cpp ../Minimax.cpp ../JS_Minimax.cpp -o MiniMax2048.html -s EXPORTED_FUNCTIONS="['_JS_MinimaxBestMove']"

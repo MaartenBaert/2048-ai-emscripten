@@ -698,6 +698,13 @@ scores_prob5ex2b = array([
 	30360, 71472, 71336, 32152, 58420, 27992, 33012, 36236, 7156, 27396, 37012, 12084, 56800, 16224, 36904, 35656, 35528, 36160, 61472, 36276,
 	35724, 35652, 36300, 35840, 36120, 71564, 36516, 76488, 67472, 36232, 27488, 36204, 36596, 59072, 60388, 27584, 35512, 36216, 36336, 27696])
 
+scores_prob6ex2a = array([
+	36204, 79908, 80456, 75080, 59184, 36528, 80464, 36400, 72568, 71604, 76828, 36468, 80172, 34324, 35700, 80384, 71424, 27512, 36488, 60592,
+	34968, 36404, 61164, 71740, 36380, 77264, 80420, 32692, 36616, 79820, 60516, 36468, 16472, 35932, 36468, 35936, 51392, 67480, 76624, 36188,
+	60412, 59788, 27652, 71448, 60216, 78832, 60556, 60592, 76604, 71528, 71808, 60604, 34812, 60856, 78980, 36392, 76764, 71956, 79244, 56516,
+	34488, 77048, 16328, 36160, 51788, 36212, 80096, 60672, 36308, 77216, 60700, 56520, 60784, 60680, 76800, 72544, 16440, 80764, 76704, 79068,
+	76956, 36324, 36012, 35980, 59612, 71976, 36012, 79124, 80504, 60624, 70020, 76916, 36332, 36400, 16232, 76736, 71900, 70880, 36256, 76540])
+
 scores_prob5half1 = concatenate((scores_prob5half1a, scores_prob5half1b, scores_prob5half1c))
 scores_prob6half4 = concatenate((scores_prob6half4a, scores_prob6half4b))
 scores_prob5ex2 = concatenate((scores_prob5ex2a, scores_prob5ex2b))
@@ -707,18 +714,17 @@ close("all")
 figure("MiniMax2048", figsize=(16,9))
 plot(linspace(0, 100, len(scores_prob5half1)), plotsort(scores_prob5half1))
 plot(linspace(0, 100, len(scores_prob5half4a)), plotsort(scores_prob5half4a))
-plot(linspace(0, 100, len(scores_prob6half4)), plotsort(scores_prob6half4))
-plot(linspace(0, 100, len(scores_prob5sq1a)), plotsort(scores_prob5sq1a))
-plot(linspace(0, 100, len(scores_prob5sq2a)), plotsort(scores_prob5sq2a))
 plot(linspace(0, 100, len(scores_prob5ex1a)), plotsort(scores_prob5ex1a))
 plot(linspace(0, 100, len(scores_prob5ex2)), plotsort(scores_prob5ex2))
+plot(linspace(0, 100, len(scores_prob6half4)), plotsort(scores_prob6half4))
+plot(linspace(0, 100, len(scores_prob6ex2a)), plotsort(scores_prob6ex2a))
 plot([0, 100], [getminscore(11)]*2, "k")
 plot([0, 100], [getminscore(12)]*2, "k")
 plot([0, 100], [getminscore(13)]*2, "k")
 text(62, getminscore(11)+1000, "2048");
 text(62, getminscore(12)+1000, "4096");
 text(62, getminscore(13)+1000, "8192");
-legend(["prob5half1 (11100)", "prob5half4 (200)", "prob6half4 (500)", "prob5sq1 (100)", "prob5sq2 (100)", "prob5ex1 (100)", "prob5ex2 (200)"], loc="upper right")
+legend(["prob5half1 (11100)", "prob5half4 (200)", "prob5ex1 (100)", "prob5ex2 (200)", "prob6half4 (500)", "prob6ex2 (100)"], loc="upper right")
 xlabel("Probability (%)")
 ylabel("Score")
 grid()
