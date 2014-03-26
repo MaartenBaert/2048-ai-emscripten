@@ -5,6 +5,7 @@
 #include <ctime>
 
 #include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <future>
 #include <iostream>
@@ -13,7 +14,7 @@
 #include <thread>
 
 unsigned int g_threadcount = 0;
-unsigned int g_threadcount_max = std::thread::hardware_concurrency() + 1;
+unsigned int g_threadcount_max = std::thread::hardware_concurrency();
 std::mutex g_threadcount_mutex;
 std::condition_variable g_threadcount_cv;
 
@@ -49,31 +50,43 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 6
+#define SEARCH_DEPTH 5
 
-#define BATCH_PLAYS 100
+#define RUN_TUNE 0
+#define TUNE_PLAYS 10000
+#define TUNE_POPULATION 100
+#define TUNE_TOURNAMENT 10
+#define TUNE_LATENCY 30
 
-#define TUNE_PLAYS 300
-#define TUNE_POPULATION 50
-#define TUNE_LATENCY 15
+#define BATCH_PLAYS 500
 
-void MinimaxPerfTest() {
+/*void MinimaxPerfTest() {
 	HeuristicParameters parameters;
 	GetDefaultHeuristicParameters(&parameters);
-	MinimaxBestScore(1, 20, 2, parameters);
-}
 
-unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) {
+	Field field = {{
+		{0, 0, 1, 0},
+		{0, 2, 6, 0},
+		{3, 4, 10, 1},
+		{3, 11, 7, 4},
+	}};
+
+	MinimaxBestScore(field, 1, 8, 1, parameters);
+}*/
+
+unsigned int MinimaxPlayTest(bool use_penalty, const HeuristicParameters& parameters) {
 
 	std::mt19937 rng(clock());
 
 	Field a, b;
 	ClearField(&a);
 
-	unsigned int score = 0, extended = 0;
-	for(unsigned int move = 0; move < 1000000; ++move) {
-		if(print)
-			std::cout << "Move: " << move << ", Score: " << score << std::endl;
+	auto t1 = std::chrono::high_resolution_clock::now();
+
+	unsigned int moves = 0, score = 0;
+	for( ; ; ) {
+		//if(print)
+		//	std::cout << "Move: " << moves << ", Score: " << score << std::endl;
 
 		bool done = false;
 		for(unsigned int i = 0; i < 1000; ++i) {
@@ -87,46 +100,46 @@ unsigned int MinimaxPlayTest(bool print, const HeuristicParameters& parameters) 
 			exit(1);
 			break;
 		}
-		if(print)
-			PrintField(b);
+		//if(print)
+		//	PrintField(b);
 
-		unsigned int moves = SEARCH_DEPTH, freecells = CountFreeCells(b);
-		if(freecells < 3) {
-			++moves;
-			++extended;
-		}
-
-		unsigned int direction = MinimaxBestMove(b, moves, parameters);
-		if(direction == (unsigned int) -1) {
-			std::cout << "Game over - Move: " << move << ", Extended: " << extended << ", Score: " << score << std::endl;
+		unsigned int direction = MinimaxBestMove(b, SEARCH_DEPTH, parameters);
+		if(direction == (unsigned int) -1)
 			break;
-		}
 		if(!ApplyGravity(&a, b, (enum_direction) direction, &score)) {
 			std::cout << "Invalid move!" << std::endl;
 			exit(1);
 			break;
 		}
-		if(print)
-			PrintField(a);
+		//if(print)
+		//	PrintField(a);
 
+		++moves;
 	}
 
+	auto t2 = std::chrono::high_resolution_clock::now();
+	unsigned int time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+	unsigned int time_per_move = time / moves;
+	//unsigned int max_time_per_move = 2000;
+	//unsigned int penalty = (time_per_move > max_time_per_move)? (time_per_move - max_time_per_move) * 1 : 0;
+
+	std::cout << "Game over - Move: " << moves << ", Time per move: " << time_per_move /*<< ", Penalty: " << penalty*/ << ", Score: " << score << std::endl;
+
 	return score;
+	//return (use_penalty)? ((score > penalty)? score - penalty : 0) : score;
 }
 
 struct TuneElement {
 	HeuristicParameters m_parameters;
 	unsigned int m_score;
-	bool operator<(const TuneElement& other) const {
-		return (m_score > other.m_score);
-	}
 };
 
-int Mutate(int value, int low, int high, std::mt19937& rng) {
-	value += ((int) (rng()) % (2 * value + 1) - value) / 20;
-	if(rng() % 5 == 0)
+int Mutate(int value, int low, int high, int step, std::mt19937& rng) {
+	value += rng() % step;
+	value -= rng() % step;
+	if(rng() % 10 == 0)
 		++value;
-	if(rng() % 5 == 0)
+	if(rng() % 10 == 0)
 		--value;
 	if(value < low)
 		return low;
@@ -143,70 +156,71 @@ void MinimaxTuneTest() {
 	TuneElement population[TUNE_POPULATION];
 	for(unsigned int i = 0; i < TUNE_POPULATION; ++i) {
 		GetDefaultHeuristicParameters(&population[i].m_parameters);
-		population[i].m_score = 10000; // guess, should be relatively low
+		population[i].m_score = 15000; // guess, should be relatively low
 	}
 
 	// simulate plays
-	HeuristicParameters play_parameters[TUNE_PLAYS];
-	std::future<unsigned int> play_scores[TUNE_PLAYS];
+	TuneElement plays[TUNE_PLAYS];
+	std::future<unsigned int> futures[TUNE_LATENCY];
 	for(unsigned int p = 0; p < TUNE_PLAYS + TUNE_LATENCY; ++p) {
 		std::cout << "Tune progress: " << 100 * p / (TUNE_PLAYS + TUNE_LATENCY) << "%" << std::endl;
 
 		// add completed play to the population
 		if(p >= TUNE_LATENCY) {
-
-			// remove element with the lowest score from the population
-			// (heap removes the highest element, highest element means lowest score)
-			std::pop_heap(population, population + TUNE_POPULATION);
-
-			// replace it with the new one
-			population[TUNE_POPULATION - 1].m_parameters = play_parameters[p - TUNE_LATENCY];
-			population[TUNE_POPULATION - 1].m_score = play_scores[p - TUNE_LATENCY].get();
-			std::push_heap(population, population + TUNE_POPULATION);
-
+			plays[p - TUNE_LATENCY].m_score = futures[p % TUNE_LATENCY].get();
+			population[(p - TUNE_LATENCY) % TUNE_POPULATION] = plays[p - TUNE_LATENCY];
 		}
 
-		// get the average of the current population
-		uint64_t sum_score_stillalive = 0;
-		uint64_t sum_score_freecell = 0;
-		uint64_t sum_score_centerofmass = 0;
-		uint64_t sum_weight = 0;
-		for(unsigned int i = 0; i < TUNE_POPULATION; ++i) {
-			sum_score_stillalive += population[i].m_score * population[i].m_parameters.m_score_stillalive;
-			sum_score_freecell += population[i].m_score * population[i].m_parameters.m_score_freecell;
-			sum_score_centerofmass += population[i].m_score * population[i].m_parameters.m_score_centerofmass;
-			sum_weight += population[i].m_score;
+		// tournament selection
+		TuneElement best1, best2;
+		GetDefaultHeuristicParameters(&best1.m_parameters);
+		GetDefaultHeuristicParameters(&best2.m_parameters);
+		best1.m_score = 0;
+		best2.m_score = 0;
+		for(unsigned int t = 0; t < TUNE_TOURNAMENT; ++t) {
+			unsigned int sel1 = rng() % TUNE_POPULATION;
+			if(population[sel1].m_score > best1.m_score)
+				best1 = population[sel1];
+			unsigned int sel2 = rng() % TUNE_POPULATION;
+			if(population[sel2].m_score > best2.m_score)
+				best2 = population[sel2];
 		}
-		HeuristicParameters average_parameters;
-		average_parameters.m_score_stillalive = (sum_score_stillalive + sum_weight / 2) / sum_weight;
-		average_parameters.m_score_freecell = (sum_score_freecell + sum_weight / 2) / sum_weight;
-		average_parameters.m_score_centerofmass = (sum_score_centerofmass + sum_weight / 2) / sum_weight;
+
+		// create winner
+		HeuristicParameters winner;
+		std::cout << "Winner (" << best1.m_score << "|" << best2.m_score << "): ";
+		for(unsigned int i = 0; i < PARAM_COUNT; ++i) {
+			winner.m_values[i] = (best1.m_parameters.m_values[i] + best2.m_parameters.m_values[i] + (rng() & 1)) / 2;
+			std::cout << winner.m_values[i] << " ";
+		}
+		std::cout << std::endl;
 
 		if(p < TUNE_PLAYS) {
 
 			// do some mutations
-			average_parameters.m_score_stillalive = Mutate(average_parameters.m_score_stillalive, 0, 1000000, rng);
-			average_parameters.m_score_freecell = Mutate(average_parameters.m_score_freecell, 0, 1000000, rng);
-			average_parameters.m_score_centerofmass = Mutate(average_parameters.m_score_centerofmass, 0, 10000, rng);
-			std::cout << "Mutation: "
-					  << average_parameters.m_score_stillalive << " "
-					  << average_parameters.m_score_freecell << " "
-					  << average_parameters.m_score_centerofmass << std::endl;
+			for(unsigned int i = 0; i < PARAM_COUNT; ++i) {
+				winner.m_values[i] = Mutate(winner.m_values[i], PARAMETERS_MIN[i], PARAMETERS_MAX[i], PARAMETERS_STEP[i], rng);
+			}
 
 			// start the job
-			play_parameters[p] = average_parameters;
-			play_scores[p] = StartJob(MinimaxPlayTest, false, average_parameters);
-
-		} else {
-
-			std::cout << "Average: "
-					  << average_parameters.m_score_stillalive << " "
-					  << average_parameters.m_score_freecell << " "
-					  << average_parameters.m_score_centerofmass << std::endl;
+			plays[p].m_parameters = winner;
+			futures[p % TUNE_LATENCY] = StartJob(MinimaxPlayTest, true, winner);
 
 		}
 
 	}
+
+	std::cout << "scores = array([\n\t";
+	for(unsigned int p = 0; p < TUNE_PLAYS; ++p) {
+		std::cout << plays[p].m_score;
+		if(p != TUNE_PLAYS - 1) {
+			if(p % 20 == 19)
+				std::cout << ",\n\t";
+			else
+				std::cout << ", ";
+		}
+	}
+	std::cout << "])" << std::endl;
 
 }
 
@@ -245,8 +259,11 @@ int main() {
 	//MinimaxPerfTest();
 	//MinimaxPlayTest(true);
 
-	//MinimaxTuneTest();
+#if RUN_TUNE
+	MinimaxTuneTest();
+#else
 	MinimaxBatchTest();
+#endif
 
 	std::cout << "Done!" << std::endl;
 	return 0;

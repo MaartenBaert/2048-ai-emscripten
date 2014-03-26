@@ -9,6 +9,26 @@
 #include <unordered_map>
 #include <vector>
 
+#define MAX_VALUE 15 // 2^15 = 32768
+
+const unsigned int PARAMETERS_MIN[PARAM_COUNT] = {0};
+const unsigned int PARAMETERS_MAX[PARAM_COUNT] = {
+	1000000,
+	1000000,
+	1000,
+	1000,
+	1000000,
+	1000,
+};
+const unsigned int PARAMETERS_STEP[PARAM_COUNT] = {
+	2000,
+	100,
+	50,
+	50,
+	50,
+	5,
+};
+
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 
 	// the original:
@@ -21,10 +41,25 @@ void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 	parameters->m_score_freecell = 3000;
 	parameters->m_score_centerofmass = 2;*/
 
-	// used by sq2
-	parameters->m_score_stillalive = 18000;
-	parameters->m_score_freecell = 2400;
-	parameters->m_score_centerofmass = 197;
+	// used by tune1 (DO NOT CHANGE):
+	/*parameters->m_score_stillalive = 13000;
+	parameters->m_score_freecell1 = 800;
+	parameters->m_score_freecell2 = 0;
+	parameters->m_score_centerofmass = 120;*/
+
+	// next:
+	/*parameters->m_score_stillalive = 9000;
+	parameters->m_score_freecell1 = 600;
+	parameters->m_score_freecell2 = 0;
+	parameters->m_score_centerofmass = 110;*/
+
+	// tuning at depth 4/5
+	parameters->m_values[PARAM_STILLALIVE] = 4800;     // depth 3: 3300
+	parameters->m_values[PARAM_FREECELL] = 220;        // depth 3: 80
+	parameters->m_values[PARAM_CENTEROFMASS] = 110;    // depth 3: 160
+	parameters->m_values[PARAM_CENTEROFMASS2] = 130;   // depth 3: 190
+	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
+	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
 
 }
 
@@ -64,21 +99,54 @@ struct MinimaxHelpers {
 	}
 };
 
+inline __attribute__((always_inline))
 unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
-	unsigned int score = helpers->m_parameters.m_score_stillalive;
+	unsigned int score = helpers->m_parameters.m_values[PARAM_STILLALIVE], freecell = helpers->m_parameters.m_values[PARAM_FREECELL];
 	int ci = 0, cj = 0;
+	int ci2 = 0, cj2 = 0;
+	unsigned int histogram[MAX_VALUE] = {0};
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
 			uint8_t value = field.cells[i][j];
 			if(value == 0) {
-				score += helpers->m_parameters.m_score_freecell;
+				score += freecell;
+				freecell >>= 1;
 			} else {
 				ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value * value;
 				cj += ((int) j * 2 - (FIELD_SIZE - 1)) * value * value;
+				ci2 += ((int) i * 2 - (FIELD_SIZE - 1)) * (1 << value);
+				cj2 += ((int) j * 2 - (FIELD_SIZE - 1)) * (1 << value);
+				++histogram[value - 1];
 			}
 		}
 	}
-	score += ((abs(ci) + abs(cj)) * helpers->m_parameters.m_score_centerofmass) >> 8;
+	score += ((abs(ci) + abs(cj)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS]) >> 8;
+	score += ((abs(ci2) + abs(cj2)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS2]) >> 8;
+	{
+		bool useful[MAX_VALUE + 1];
+		useful[0] = true;
+		unsigned int total_value = helpers->m_parameters.m_values[PARAM_USEFUL_LOOKAHEAD];
+		for(unsigned int i = 0; i < MAX_VALUE; ++i) {
+			total_value += histogram[i] * (1 << i);
+			useful[i + 1] = (total_value >= (2u << i) + i);
+		}
+		for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
+			for(unsigned int j = 0; j < FIELD_SIZE - 1; ++j) {
+				uint8_t value1 = field.cells[i][j];
+				uint8_t value2 = field.cells[i][j + 1];
+				if(useful[value1] == useful[value2])
+					score += helpers->m_parameters.m_values[PARAM_USEFUL];
+			}
+		}
+		for(unsigned int i = 0; i < FIELD_SIZE - 1; ++i) {
+			for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
+				uint8_t value1 = field.cells[i][j];
+				uint8_t value2 = field.cells[i + 1][j];
+				if(useful[value1] == useful[value2])
+					score += helpers->m_parameters.m_values[PARAM_USEFUL];
+			}
+		}
+	}
 	return score;
 }
 
@@ -111,7 +179,6 @@ bool TurnPlayer(const Field& field, unsigned int moves_left, unsigned int& best_
 
 unsigned int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers) {
 
-	// maximum depth reached?
 	if(moves_left == 0)
 		return HeuristicScore(field, helpers);
 
@@ -121,7 +188,7 @@ unsigned int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_le
 
 	// check the cache
 	CachedResult dummy;
-	auto cache = helpers->m_cache_computer[moves_left - 1].emplace(normfield, dummy);
+	auto cache = helpers->m_cache_computer[moves_left].emplace(normfield, dummy);
 	CachedResult &cache_result = cache.first->second;
 	if(cache.second) {
 		++helpers->m_cache_computer_miss;
@@ -135,6 +202,8 @@ unsigned int CachedMinimaxTurnComputer(const Field& field, unsigned int moves_le
 
 }
 
+//unsigned int g_todo_table[20] = {2, 3, 4, 6, 8, 12, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
+
 unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, MinimaxHelpers* helpers) {
 	assert(moves_left != 0);
 	unsigned int locations[FIELD_SIZE * FIELD_SIZE], location_count = 0;
@@ -146,8 +215,10 @@ unsigned int MinimaxTurnComputer(const Field& field, unsigned int moves_left, Mi
 			}
 		}
 	}
-	unsigned int todo = std::min(1u << (moves_left - 1), location_count);
-	if(location_count > 3) {
+	//assert(moves_left <= 20);
+	//unsigned int todo = std::min(g_todo_table[moves_left - 1], location_count);
+	unsigned int todo = std::min(1u << moves_left, location_count);
+	if(location_count > 2) {
 		unsigned int score_sum = 0, score_div = 0;
 		for(unsigned int k = 0; k < todo; ++k) {
 			unsigned int p = helpers->m_rng() % location_count;
@@ -184,31 +255,10 @@ unsigned int MinimaxTurnPlayer(const Field& field, unsigned int moves_left, Mini
 	return best_score;
 }
 
-unsigned int MinimaxBestScore(unsigned int min_moves, unsigned int max_moves, unsigned int step, const HeuristicParameters& parameters) {
-
-	unsigned int score = 0;
-	for(unsigned int moves = min_moves; moves <= max_moves; moves += step) {
-
-		// initialize
-		MinimaxHelpers helpers(parameters, moves);
-		Field field;
-		ClearField(&field);
-
-		// run minimax
-		score = CachedMinimaxTurnComputer(field, moves, &helpers);
-
-		// print stats
-		std::cout << "Moves: " << moves << ", Best score: " << score << std::endl;
-		std::cout << "**** Cache computer - hit=" << helpers.m_cache_computer_hit
-				  << " miss=" << helpers.m_cache_computer_miss
-				  << std::endl;
-
-	}
-
-	return score;
-}
-
 unsigned int MinimaxBestMove(const Field& field, unsigned int moves, const HeuristicParameters& parameters) {
+	/*if(CountFreeCells(field) < parameters.m_values[PARAM_EXTENDMOVES]) {
+		++moves;
+	}*/
 	MinimaxHelpers helpers(parameters, moves);
 	unsigned int best_score = 0, best_move = (unsigned int) -1;
 	for(unsigned int direction = 0; direction < 4; ++direction) {

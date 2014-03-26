@@ -12,10 +12,7 @@ unsigned int JS_MinimaxBestMove(cell_t f00, cell_t f01, cell_t f02, cell_t f03,
 		{f20, f21, f22, f23},
 		{f30, f31, f32, f33},
 	}};
-	unsigned int moves = 6;
-	if(CountFreeCells(field) < 3)
-		++moves;
 	HeuristicParameters parameters;
 	GetDefaultHeuristicParameters(&parameters);
-	return MinimaxBestMove(field, moves, parameters);
+	return MinimaxBestMove(field, 6, parameters);
 }
