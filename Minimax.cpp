@@ -54,12 +54,12 @@ void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 	parameters->m_score_centerofmass = 110;*/
 
 	// tuning at depth 4
-	parameters->m_values[PARAM_STILLALIVE] = 4800;
-	parameters->m_values[PARAM_FREECELL] = 260;
-	parameters->m_values[PARAM_CENTEROFMASS1] = 28;
-	parameters->m_values[PARAM_CENTEROFMASS2] = 170;
-	parameters->m_values[PARAM_CENTEROFMASS3] = 470;
-	parameters->m_values[PARAM_CENTEROFMASS4] = 40;
+	parameters->m_values[PARAM_STILLALIVE] = 9057;
+	parameters->m_values[PARAM_FREECELL] = 39;
+	parameters->m_values[PARAM_CENTEROFMASS1] = 16;
+	parameters->m_values[PARAM_CENTEROFMASS2] = 110;
+	parameters->m_values[PARAM_CENTEROFMASS3] = 304;
+	parameters->m_values[PARAM_CENTEROFMASS4] = 45;
 //	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
 //	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
 

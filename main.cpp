@@ -50,9 +50,9 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 4
+#define SEARCH_DEPTH 5
 
-#define RUN_TUNE 1
+#define RUN_TUNE 0
 #define TUNE_PLAYS 20000
 #define TUNE_POPULATION 100
 #define TUNE_TOURNAMENT 10
