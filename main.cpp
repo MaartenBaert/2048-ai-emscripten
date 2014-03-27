@@ -50,7 +50,7 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 5
+#define SEARCH_DEPTH 6
 
 #define RUN_TUNE 0
 #define TUNE_PLAYS 10000
@@ -75,6 +75,7 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 }*/
 
 unsigned int MinimaxPlayTest(bool use_penalty, const HeuristicParameters& parameters) {
+	((void) use_penalty);
 
 	std::mt19937 rng(clock());
 
@@ -135,6 +136,8 @@ struct TuneElement {
 };
 
 int Mutate(int value, int low, int high, int step, std::mt19937& rng) {
+	if(step == -1)
+		return value;
 	value += rng() % step;
 	value -= rng() % step;
 	if(rng() % 10 == 0)

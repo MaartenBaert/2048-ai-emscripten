@@ -15,18 +15,18 @@ const unsigned int PARAMETERS_MIN[PARAM_COUNT] = {0};
 const unsigned int PARAMETERS_MAX[PARAM_COUNT] = {
 	1000000,
 	1000000,
-	1000,
-	1000,
-	1000000,
-	1000,
+	10000,
+	10000,
+	10000,
+	10000,
 };
 const unsigned int PARAMETERS_STEP[PARAM_COUNT] = {
-	2000,
-	100,
-	50,
-	50,
-	50,
-	5,
+	(unsigned int) -1,
+	(unsigned int) -1,
+	4,
+	30,
+	44,
+	26,
 };
 
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
@@ -53,13 +53,15 @@ void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 	parameters->m_score_freecell2 = 0;
 	parameters->m_score_centerofmass = 110;*/
 
-	// tuning at depth 4/5
-	parameters->m_values[PARAM_STILLALIVE] = 4800;     // depth 3: 3300
-	parameters->m_values[PARAM_FREECELL] = 220;        // depth 3: 80
-	parameters->m_values[PARAM_CENTEROFMASS] = 110;    // depth 3: 160
-	parameters->m_values[PARAM_CENTEROFMASS2] = 130;   // depth 3: 190
-	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
-	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
+	// tuning at depth 3
+	parameters->m_values[PARAM_STILLALIVE] = 4800;
+	parameters->m_values[PARAM_FREECELL] = 220;
+	parameters->m_values[PARAM_CENTEROFMASS1] = 27;
+	parameters->m_values[PARAM_CENTEROFMASS2] = 115;
+	parameters->m_values[PARAM_CENTEROFMASS3] = 694;
+	parameters->m_values[PARAM_CENTEROFMASS4] = 64;
+//	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
+//	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
 
 }
 
@@ -102,9 +104,10 @@ struct MinimaxHelpers {
 inline __attribute__((always_inline))
 unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
 	unsigned int score = helpers->m_parameters.m_values[PARAM_STILLALIVE], freecell = helpers->m_parameters.m_values[PARAM_FREECELL];
-	int ci = 0, cj = 0;
-	int ci2 = 0, cj2 = 0;
-	unsigned int histogram[MAX_VALUE] = {0};
+	int wx = 0, wy = 0;
+	/*int ci = 0, cj = 0;
+	int ci2 = 0, cj2 = 0;*/
+	//unsigned int histogram[MAX_VALUE] = {0};
 	for(unsigned int i = 0; i < FIELD_SIZE; ++i) {
 		for(unsigned int j = 0; j < FIELD_SIZE; ++j) {
 			uint8_t value = field.cells[i][j];
@@ -112,17 +115,25 @@ unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
 				score += freecell;
 				freecell >>= 1;
 			} else {
-				ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value * value;
+				int weight3 = value * helpers->m_parameters.m_values[PARAM_CENTEROFMASS4];
+				int weight2 = value * (helpers->m_parameters.m_values[PARAM_CENTEROFMASS3] + weight3);
+				int weight1 = value * (helpers->m_parameters.m_values[PARAM_CENTEROFMASS2] + weight2);
+				int weight0 = value * (helpers->m_parameters.m_values[PARAM_CENTEROFMASS1] + weight1);
+				//int weight = value * helpers->m_parameters.m_values[PARAM_CENTEROFMASS1] + (1 << value) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS2];
+				wx += ((int) (i * 2) - (FIELD_SIZE - 1)) * weight0;
+				wy += ((int) (j * 2) - (FIELD_SIZE - 1)) * weight0;
+				/*ci += ((int) i * 2 - (FIELD_SIZE - 1)) * value * value;
 				cj += ((int) j * 2 - (FIELD_SIZE - 1)) * value * value;
 				ci2 += ((int) i * 2 - (FIELD_SIZE - 1)) * (1 << value);
-				cj2 += ((int) j * 2 - (FIELD_SIZE - 1)) * (1 << value);
-				++histogram[value - 1];
+				cj2 += ((int) j * 2 - (FIELD_SIZE - 1)) * (1 << value);*/
+				//++histogram[value - 1];
 			}
 		}
 	}
-	score += ((abs(ci) + abs(cj)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS]) >> 8;
-	score += ((abs(ci2) + abs(cj2)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS2]) >> 8;
-	{
+	score += (abs(wx) + abs(wy)) >> 10;
+	/*score += ((abs(ci) + abs(cj)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS]) >> 8;
+	score += ((abs(ci2) + abs(cj2)) * helpers->m_parameters.m_values[PARAM_CENTEROFMASS2]) >> 8;*/
+	/*{
 		bool useful[MAX_VALUE + 1];
 		useful[0] = true;
 		unsigned int total_value = helpers->m_parameters.m_values[PARAM_USEFUL_LOOKAHEAD];
@@ -146,7 +157,7 @@ unsigned int HeuristicScore(const Field& field, MinimaxHelpers* helpers) {
 					score += helpers->m_parameters.m_values[PARAM_USEFUL];
 			}
 		}
-	}
+	}*/
 	return score;
 }
 
