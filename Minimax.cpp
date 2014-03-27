@@ -22,36 +22,14 @@ const unsigned int PARAMETERS_MAX[PARAM_COUNT] = {
 };
 const unsigned int PARAMETERS_STEP[PARAM_COUNT] = {
 	1000,
-	44,
-	6,
-	24,
-	140,
-	12,
+	4,
+	2,
+	11,
+	30,
+	5,
 };
 
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
-
-	// the original:
-	/*parameters->m_score_stillalive = 100000;
-	parameters->m_score_freecell = 10000;
-	parameters->m_score_centerofmass = 10;*/
-
-	// used by half4:
-	/*parameters->m_score_stillalive = 23000;
-	parameters->m_score_freecell = 3000;
-	parameters->m_score_centerofmass = 2;*/
-
-	// used by tune1 (DO NOT CHANGE):
-	/*parameters->m_score_stillalive = 13000;
-	parameters->m_score_freecell1 = 800;
-	parameters->m_score_freecell2 = 0;
-	parameters->m_score_centerofmass = 120;*/
-
-	// next:
-	/*parameters->m_score_stillalive = 9000;
-	parameters->m_score_freecell1 = 600;
-	parameters->m_score_freecell2 = 0;
-	parameters->m_score_centerofmass = 110;*/
 
 	// tuning at depth 4
 	parameters->m_values[PARAM_STILLALIVE] = 9057;
@@ -60,8 +38,6 @@ void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 	parameters->m_values[PARAM_CENTEROFMASS2] = 110;
 	parameters->m_values[PARAM_CENTEROFMASS3] = 304;
 	parameters->m_values[PARAM_CENTEROFMASS4] = 45;
-//	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
-//	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
 
 }
 

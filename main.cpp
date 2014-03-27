@@ -52,8 +52,8 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 #define SEARCH_DEPTH 5
 
-#define RUN_TUNE 0
-#define TUNE_PLAYS 20000
+#define RUN_TUNE 1
+#define TUNE_PLAYS 2000
 #define TUNE_POPULATION 100
 #define TUNE_TOURNAMENT 10
 #define TUNE_LATENCY 30
@@ -222,7 +222,6 @@ void MinimaxTuneTest() {
 		population_average.m_values[i] = (population_average.m_values[i] + TUNE_POPULATION / 2) / TUNE_POPULATION;
 		std::cout << population_average.m_values[i] << " ";
 	}
-
 	std::cout << std::endl;
 
 }
