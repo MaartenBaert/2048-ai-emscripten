@@ -50,29 +50,15 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 6
+#define SEARCH_DEPTH 4
 
-#define RUN_TUNE 0
-#define TUNE_PLAYS 10000
+#define RUN_TUNE 1
+#define TUNE_PLAYS 20000
 #define TUNE_POPULATION 100
 #define TUNE_TOURNAMENT 10
 #define TUNE_LATENCY 30
 
 #define BATCH_PLAYS 500
-
-/*void MinimaxPerfTest() {
-	HeuristicParameters parameters;
-	GetDefaultHeuristicParameters(&parameters);
-
-	Field field = {{
-		{0, 0, 1, 0},
-		{0, 2, 6, 0},
-		{3, 4, 10, 1},
-		{3, 11, 7, 4},
-	}};
-
-	MinimaxBestScore(field, 1, 8, 1, parameters);
-}*/
 
 unsigned int MinimaxPlayTest(bool use_penalty, const HeuristicParameters& parameters) {
 	((void) use_penalty);
@@ -224,6 +210,20 @@ void MinimaxTuneTest() {
 		}
 	}
 	std::cout << "])" << std::endl;
+
+	// calculate population average
+	HeuristicParameters population_average;
+	std::cout << "Population average: ";
+	for(unsigned int i = 0; i < PARAM_COUNT; ++i) {
+		population_average.m_values[i] = 0;
+		for(unsigned int p = 0; p < TUNE_POPULATION; ++p) {
+			population_average.m_values[i] += population[p].m_parameters.m_values[i];
+		}
+		population_average.m_values[i] = (population_average.m_values[i] + TUNE_POPULATION / 2) / TUNE_POPULATION;
+		std::cout << population_average.m_values[i] << " ";
+	}
+
+	std::cout << std::endl;
 
 }
 

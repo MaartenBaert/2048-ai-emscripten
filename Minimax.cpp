@@ -21,12 +21,12 @@ const unsigned int PARAMETERS_MAX[PARAM_COUNT] = {
 	10000,
 };
 const unsigned int PARAMETERS_STEP[PARAM_COUNT] = {
-	(unsigned int) -1,
-	(unsigned int) -1,
-	4,
-	30,
+	1000,
 	44,
-	26,
+	6,
+	24,
+	140,
+	12,
 };
 
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
@@ -53,13 +53,13 @@ void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 	parameters->m_score_freecell2 = 0;
 	parameters->m_score_centerofmass = 110;*/
 
-	// tuning at depth 3
+	// tuning at depth 4
 	parameters->m_values[PARAM_STILLALIVE] = 4800;
-	parameters->m_values[PARAM_FREECELL] = 220;
-	parameters->m_values[PARAM_CENTEROFMASS1] = 27;
-	parameters->m_values[PARAM_CENTEROFMASS2] = 115;
-	parameters->m_values[PARAM_CENTEROFMASS3] = 694;
-	parameters->m_values[PARAM_CENTEROFMASS4] = 64;
+	parameters->m_values[PARAM_FREECELL] = 260;
+	parameters->m_values[PARAM_CENTEROFMASS1] = 28;
+	parameters->m_values[PARAM_CENTEROFMASS2] = 170;
+	parameters->m_values[PARAM_CENTEROFMASS3] = 470;
+	parameters->m_values[PARAM_CENTEROFMASS4] = 40;
 //	parameters->m_values[PARAM_USEFUL] = 170;          // depth 3: 90
 //	parameters->m_values[PARAM_USEFUL_LOOKAHEAD] = 18; // depth 3: 21
 
