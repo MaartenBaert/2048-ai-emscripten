@@ -22,22 +22,22 @@ const unsigned int PARAMETERS_MAX[PARAM_COUNT] = {
 };
 const unsigned int PARAMETERS_STEP[PARAM_COUNT] = {
 	1000,
-	4,
-	2,
-	11,
-	30,
 	5,
+	2,
+	15,
+	18,
+	8,
 };
 
 void GetDefaultHeuristicParameters(HeuristicParameters* parameters) {
 
 	// tuning at depth 4
-	parameters->m_values[PARAM_STILLALIVE] = 9057;
-	parameters->m_values[PARAM_FREECELL] = 39;
-	parameters->m_values[PARAM_CENTEROFMASS1] = 16;
-	parameters->m_values[PARAM_CENTEROFMASS2] = 110;
-	parameters->m_values[PARAM_CENTEROFMASS3] = 304;
-	parameters->m_values[PARAM_CENTEROFMASS4] = 45;
+	parameters->m_values[PARAM_STILLALIVE] = 9500;
+	parameters->m_values[PARAM_FREECELL] = 52;
+	parameters->m_values[PARAM_CENTEROFMASS1] = 21;
+	parameters->m_values[PARAM_CENTEROFMASS2] = 150;
+	parameters->m_values[PARAM_CENTEROFMASS3] = 188;
+	parameters->m_values[PARAM_CENTEROFMASS4] = 80;
 
 }
 
