@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Maarten Baert <maarten-baert@hotmail.com>
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #include "2048.h"
 #include "Minimax.h"
 
@@ -12,6 +20,16 @@
 #include <mutex>
 #include <random>
 #include <thread>
+
+#define SEARCH_DEPTH 6
+
+#define RUN_TUNE 0
+#define TUNE_PLAYS 2000
+#define TUNE_POPULATION 100
+#define TUNE_TOURNAMENT 10
+#define TUNE_LATENCY 30
+
+#define BATCH_PLAYS 400
 
 unsigned int g_threadcount = 0;
 unsigned int g_threadcount_max = std::thread::hardware_concurrency();
@@ -49,16 +67,6 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 					  func, std::forward<Args>(args)...);
 
 }
-
-#define SEARCH_DEPTH 6
-
-#define RUN_TUNE 0
-#define TUNE_PLAYS 2000
-#define TUNE_POPULATION 100
-#define TUNE_TOURNAMENT 10
-#define TUNE_LATENCY 30
-
-#define BATCH_PLAYS 400
 
 unsigned int MinimaxPlayTest(bool use_penalty, const HeuristicParameters& parameters) {
 	((void) use_penalty);
@@ -258,7 +266,6 @@ void MinimaxBatchTest() {
 
 int main() {
 
-	//MinimaxPerfTest();
 	//MinimaxPlayTest(true);
 
 #if RUN_TUNE

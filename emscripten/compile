@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Path to emscripten compiler:
 EMCC="/static/maarten/nobackup/build-from-source/emscripten/emcc"
+
+# Path to js directory of the 2048 repository:
+JS_DESTINATION="/static/maarten/nobackup/build-from-source/2048/js"
+
+set -e
 
 "$EMCC" -O3 -std=c++11 -DNDEBUG -s TOTAL_MEMORY=33554432 ../2048.cpp ../Minimax.cpp ../JS_Minimax.cpp -o MiniMax2048.html -s EXPORTED_FUNCTIONS="['_JS_MinimaxBestMove']"
 
-cp MiniMax2048.js /static/maarten/nobackup/build-from-source/2048/js/MiniMax2048.js
+cp MiniMax2048.js "$JS_DESTINATION/MiniMax2048.js"
