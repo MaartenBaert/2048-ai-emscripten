@@ -50,15 +50,15 @@ std::future<typename std::result_of<Func(Args...)>::type> StartJob(Func func, Ar
 
 }
 
-#define SEARCH_DEPTH 5
+#define SEARCH_DEPTH 6
 
-#define RUN_TUNE 1
+#define RUN_TUNE 0
 #define TUNE_PLAYS 2000
 #define TUNE_POPULATION 100
 #define TUNE_TOURNAMENT 10
 #define TUNE_LATENCY 30
 
-#define BATCH_PLAYS 500
+#define BATCH_PLAYS 400
 
 unsigned int MinimaxPlayTest(bool use_penalty, const HeuristicParameters& parameters) {
 	((void) use_penalty);
