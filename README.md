@@ -1,7 +1,7 @@
-MiniMax2048
-===========
+ExpectiMax2048
+==============
 
-It's actually 'expectimax', not 'minimax', but I was too lazy to change the name ;). This is the C++ part of my 2048 AI. The HTML/JS part is here:
+This is the C++ part of my 2048 AI. The HTML/JS part is here:
 
 https://github.com/MaartenBaert/2048
 
