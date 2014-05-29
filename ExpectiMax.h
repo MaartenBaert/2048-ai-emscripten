@@ -14,37 +14,28 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 */
 
+#pragma once
+
 #include "Board.h"
-#include "PerfTests.h"
-#include "PlayTests.h"
-#include "Analyze.h"
 
-#include <iostream>
+enum enum_parameters {
+	PARAM_STILLALIVE,
+	PARAM_FREECELL,
+	PARAM_CENTEROFMASS1,
+	PARAM_CENTEROFMASS2,
+	PARAM_CENTEROFMASS3,
+	PARAM_CENTEROFMASS4,
+	PARAM_COUNT
+};
 
-int main() {
+struct HeuristicParameters {
+	unsigned int m_values[PARAM_COUNT];
+};
 
-	//Test_CollapseRow();
-	//Test_FlipBoard();
-	//Test_CollapseBoard();
-	//Test_NormalizeBoard();
-	//Test_HashBoard();
+extern const unsigned int PARAMETERS_MIN[PARAM_COUNT];
+extern const unsigned int PARAMETERS_MAX[PARAM_COUNT];
+extern const unsigned int PARAMETERS_STEP[PARAM_COUNT];
 
-	/*HeuristicParameters parameters;
-	GetDefaultHeuristicParameters(&parameters);
-	PlayTest(parameters);*/
-
-	//PlayTest_Tune(10, 10000, 100, 10, 30);
-	PlayTest_Batch(0, 1000, NULL);
-
-	/*BoardDB boarddb;
-	boarddb.Load();
-	PlayTest_Batch(0, 4000, &boarddb);
-	boarddb.Save();*/
-
-	/*BoardDB boarddb;
-	boarddb.Load();
-	Analyze_Test3(&boarddb);*/
-
-	std::cout << "Done." << std::endl;
-	return 0;
-}
+void GetDefaultHeuristicParameters(HeuristicParameters* parameters);
+void PrintExpectiMaxStats();
+std::pair<enum_direction, unsigned int> FindBestMove(Board board, const HeuristicParameters& parameters);

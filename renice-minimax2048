@@ -1,3 +1,0 @@
-#!/bin/bash
-
-pgrep -w MiniMax2048 | xargs renice 15

@@ -14,37 +14,10 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 */
 
-#include "Board.h"
-#include "PerfTests.h"
-#include "PlayTests.h"
-#include "Analyze.h"
+#pragma once
 
-#include <iostream>
+#include "BoardDB.h"
 
-int main() {
-
-	//Test_CollapseRow();
-	//Test_FlipBoard();
-	//Test_CollapseBoard();
-	//Test_NormalizeBoard();
-	//Test_HashBoard();
-
-	/*HeuristicParameters parameters;
-	GetDefaultHeuristicParameters(&parameters);
-	PlayTest(parameters);*/
-
-	//PlayTest_Tune(10, 10000, 100, 10, 30);
-	PlayTest_Batch(0, 1000, NULL);
-
-	/*BoardDB boarddb;
-	boarddb.Load();
-	PlayTest_Batch(0, 4000, &boarddb);
-	boarddb.Save();*/
-
-	/*BoardDB boarddb;
-	boarddb.Load();
-	Analyze_Test3(&boarddb);*/
-
-	std::cout << "Done." << std::endl;
-	return 0;
-}
+void Analyze_Test1(BoardDB* boarddb);
+void Analyze_Test2(BoardDB* boarddb);
+void Analyze_Test3(BoardDB* boarddb);
